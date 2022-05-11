@@ -1,0 +1,40 @@
+#!/usr/bin/zsh
+
+[ -z $1 ] && echo "no argument found quitting..." && exit 1
+[ $2 ] && echo "Unexpected argument $2" && exit 1
+GROUP_INSTALL=0
+PACKAGE_INSTALL=0
+case $1 in 
+		"--groups"| "-g")
+				GROUP_INSTALL=1
+				;;
+		"--packages"|"-p")
+				PACKAGE_INSTALL=1
+				;;
+		"--help"|"-h"|"-?")
+				echo -e "\rSimple script to install packages on archlinux\n"\
+						"\r\tUsage: pacinstall [argument]\n"\
+						"\rAvailable arguments are:\n"\
+						"\t--packages | -p        List packages in the installer\n"\
+						"\t--groups   | -g        List package groups in the installer"
+				exit 0
+				;;
+		*)
+				echo -e "invalid argument: $1\n"\
+						"\rExecute $0 --help to list all arguments"
+				exit 1
+				;;
+esac
+[ $PACKAGE_INSTALL -eq 1 ] && pacman -Sl |\
+	awk '{print $1 " " $2}' |\
+	fzf --preview 'echo {} | cut -d" " -f2 | xargs -I % pacman -Si %'\
+		--layout=reverse \
+		--bind 'enter:execute(echo {} | cut -d" " -f2 | xargs -I % sudo pacman -Syu --noconfirm --needed %)'\
+	&& printf ''
+[ $GROUP_INSTALL -eq 1 ] && pacman -Sgg |\
+	cut -d" " -f1 | uniq |\
+	fzf --preview 'pacman -Sgq {}' \
+		--layout=reverse \
+		--bind 'enter:execute(sudo pacman -Syu --noconfirm --needed {})'\
+		&& printf ''
+exit 0
